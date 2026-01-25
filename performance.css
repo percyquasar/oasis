@@ -1,0 +1,230 @@
+/* ===================================
+   PERCY QUASAR EN EL OASIS
+   Optimized Performance Utilities
+   =================================== */
+
+/* === Performance Optimizations === */
+
+/* Reduce animations on low-end devices */
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* GPU Acceleration for smooth animations */
+.vinyl-record,
+.btn-control,
+.playlist-item,
+.album-art {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+}
+
+/* Optimize font rendering */
+body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+/* === Loading States === */
+
+/* Skeleton loader for playlist items */
+.playlist-item.loading {
+    background: linear-gradient(90deg,
+            var(--glass-bg) 25%,
+            var(--glass-border) 50%,
+            var(--glass-bg) 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-loading {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* Loading spinner for audio buffering */
+.loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: var(--color-primary);
+    animation: spinner-rotate 0.8s linear infinite;
+}
+
+@keyframes spinner-rotate {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* === Focus Styles for Accessibility === */
+
+/* Visible focus indicator */
+button:focus-visible,
+input:focus-visible,
+a:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+/* Remove default focus for mouse users */
+button:focus:not(:focus-visible),
+input:focus:not(:focus-visible),
+a:focus:not(:focus-visible) {
+    outline: none;
+}
+
+/* === Print Styles === */
+
+@media print {
+
+    .bg-gradient,
+    .bg-particles,
+    .header-controls,
+    .player-controls,
+    .visualizer-modes,
+    .btn-mode {
+        display: none !important;
+    }
+
+    body {
+        background: white;
+        color: black;
+    }
+
+    .playlist-section {
+        border: 1px solid #ccc;
+    }
+}
+
+/* === Offline Indicator === */
+
+.offline-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(135deg, #ff6b6b, #ee5a6f);
+    color: white;
+    padding: 0.75rem;
+    text-align: center;
+    font-weight: 600;
+    z-index: 10000;
+    transform: translateY(-100%);
+    transition: transform 0.3s ease;
+}
+
+.offline-banner.show {
+    transform: translateY(0);
+}
+
+/* === Improved Tooltips === */
+
+[title] {
+    position: relative;
+}
+
+/* Custom tooltip styling could be added here if needed */
+
+/* === Better Mobile Touch Targets === */
+
+@media (max-width: 768px) {
+
+    /* Ensure minimum 44x44px touch targets */
+    .btn-icon,
+    .btn-control,
+    .tab-btn {
+        min-width: 44px;
+        min-height: 44px;
+    }
+}
+
+/* === Dark Mode Image Adjustments === */
+
+body:not(.apollo-mode) img {
+    opacity: 0.9;
+}
+
+body.apollo-mode img {
+    opacity: 1;
+}
+
+/* === Smooth Scrolling === */
+
+@media (prefers-reduced-motion: no-preference) {
+    html {
+        scroll-behavior: smooth;
+    }
+}
+
+/* === High Contrast Mode Support === */
+
+@media (prefers-contrast: high) {
+    :root {
+        --color-text: hsl(0, 0%, 100%);
+        --color-text-secondary: hsl(0, 0%, 85%);
+        --color-text-muted: hsl(0, 0%, 75%);
+    }
+
+    .btn-icon,
+    .btn-control {
+        border-width: 2px;
+    }
+}
+
+/* === Prevent Text Selection on UI Elements === */
+
+.btn-icon,
+.btn-control,
+.btn-mode,
+.tab-btn,
+.playlist-item-number {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    user-select: none;
+}
+
+/* === Better Scrollbar Styling === */
+
+/* For Webkit browsers */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--color-surface);
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--color-surface-light);
+    border-radius: 5px;
+    transition: background 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--color-primary);
+}
+
+/* For Firefox */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-surface-light) var(--color-surface);
+}

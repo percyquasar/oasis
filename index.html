@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="PERCY QUASAR EN EL OASIS - Plataforma de streaming de música con mixes exclusivos. Escucha tus mezclas favoritas en cualquier dispositivo.">
+    <meta name="keywords" content="música, streaming, mixes, DJ, PERCY QUASAR, OASIS">
+    <meta name="author" content="PERCY QUASAR">
+    <title>PERCY QUASAR EN EL OASIS | Music Streaming</title>
+
+    <!-- Preconnect for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <!-- Google Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="extra-styles.css">
+    <link rel="stylesheet" href="performance.css">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎵</text></svg>">
+</head>
+
+<body>
+    <!-- Background Effects -->
+    <div class="bg-gradient"></div>
+    <div class="bg-particles" id="particles"></div>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo-container">
+                <div class="logo-icon">
+                    <img src="percyquasar.jpg" alt="Percy Quasar Logo"
+                        style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;">
+                </div>
+                <div class="logo-text">
+                    <h1>PERCY QUASAR</h1>
+                    <p class="subtitle">EN EL OASIS</p>
+                </div>
+            </div>
+
+            <div class="header-controls">
+                <button class="btn-icon" id="voiceBtn" aria-label="Comandos de Voz" title="Activar 'Oasis' (Voz)">
+                    <span class="icon" aria-hidden="true">🎙️</span>
+                    <span class="voice-indicator"></span>
+                </button>
+                <button class="btn-icon" id="sleepBtn" aria-label="Temporizador" title="Temporizador de Sueño">
+                    <span class="icon" aria-hidden="true">🌙</span>
+                    <span id="sleepCountdown" class="sleep-countdown-mini hidden">00:00</span>
+                </button>
+                <button class="btn-icon" id="timeBtn" aria-label="Anunciar hora" title="Escuchar la hora">
+                    <span class="icon" aria-hidden="true">🕒</span>
+                </button>
+                <button class="btn-icon" id="settingsBtn" aria-label="Configuración" title="Configuración">
+                    <span class="icon" aria-hidden="true">⚙️</span>
+                </button>
+                <button class="btn-icon" id="themeToggle" aria-label="Cambiar tema" title="Cambiar Tema">
+                    <span class="icon" aria-hidden="true">🌗</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Sleep Timer Modal -->
+        <div id="sleepModal" class="modal-overlay hidden">
+            <div class="modal-content glass-panel">
+                <h3>Temporizador de Sueño 🌙</h3>
+                <p>La música se detendrá automáticamente.</p>
+                <div class="sleep-options">
+                    <button class="btn-sleep" data-time="15">15 min</button>
+                    <button class="btn-sleep" data-time="30">30 min</button>
+                    <button class="btn-sleep" data-time="60">60 min</button>
+                </div>
+                <button class="btn-cancel" id="closeSleepModal">Cancelar</button>
+            </div>
+        </div>
+
+        <!-- Settings Modal -->
+        <div id="settingsModal" class="modal-overlay hidden">
+            <div class="modal-content glass-panel">
+                <h3>Configuración ⚙️</h3>
+                <div class="settings-section">
+                    <h4>🌍 Ubicación y Clima</h4>
+                    <p id="locationStatus" class="settings-status">Cargando...</p>
+                    <button class="btn-sleep" id="resetLocationBtn">Resetear Permisos de Ubicación</button>
+                    <small style="display: block; margin-top: 8px; opacity: 0.7;">Esto te permitirá volver a activar el
+                        clima si lo desactivaste.</small>
+                </div>
+                <button class="btn-cancel" id="closeSettingsModal">Cerrar</button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Now Playing Section -->
+            <section class="now-playing" id="nowPlaying">
+                <div class="album-art-container">
+                    <div class="album-art" id="albumArt">
+                        <canvas id="visualizerCanvas" width="300" height="300"></canvas>
+                        <div class="vinyl-record">
+                            <div class="vinyl-center"></div>
+                        </div>
+                    </div>
+                    <div class="visualizer-modes">
+                        <button class="btn-mode active" data-mode="bars" title="Barras">📊</button>
+                        <button class="btn-mode" data-mode="waves" title="Ondas">〰️</button>
+                        <button class="btn-mode" data-mode="circle" title="Círculo">⭕</button>
+                        <button class="btn-mode" data-mode="particles" title="Partículas">✨</button>
+                    </div>
+                </div>
+
+                <div class="track-info">
+                    <h2 class="track-title" id="trackTitle">Selecciona un Mix</h2>
+                    <p class="track-artist" id="trackArtist">PERCY QUASAR</p>
+                    <div class="track-meta">
+                        <span class="track-duration" id="trackDuration">--:--</span>
+                        <span class="track-size" id="trackSize">-- MB</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Player Controls -->
+            <section class="player-controls">
+                <div class="progress-container">
+                    <div class="progress-time" id="currentTime">0:00</div>
+                    <div class="progress-bar-container">
+                        <input type="range" id="progressBar" min="0" max="100" value="0" step="0.1"
+                            aria-label="Progress">
+                        <div class="loading-bar" id="loadingBar"></div>
+                    </div>
+                    <div class="progress-time" id="totalTime">0:00</div>
+                </div>
+
+                <div class="controls">
+                    <button class="btn-control btn-icon" id="likeBtn" aria-label="Me gusta" title="Agregar a favoritos">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path
+                                d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                        </svg>
+                    </button>
+
+                    <button class="btn-control btn-icon" id="shareBtn" aria-label="Compartir"
+                        title="Compartir mix actual">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path
+                                d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z" />
+                        </svg>
+                    </button>
+
+                    <button class="btn-control btn-secondary" id="prevBtn" aria-label="Previous track">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
+                        </svg>
+                    </button>
+
+                    <button class="btn-control btn-primary" id="playBtn" aria-label="Play/Pause">
+                        <svg class="play-icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M8 5v14l11-7z" />
+                        </svg>
+                        <svg class="pause-icon hidden" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+                        </svg>
+                    </button>
+
+                    <button class="btn-control btn-secondary" id="nextBtn" aria-label="Next track">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
+                        </svg>
+                    </button>
+
+                    <button class="btn-control btn-icon" id="shuffleBtn" aria-label="Aleatorio"
+                        title="Reproducción aleatoria">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path
+                                d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z" />
+                        </svg>
+                    </button>
+
+                    <button class="btn-control btn-icon" id="repeatBtn" aria-label="Repetir" title="Repetir">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z" />
+                        </svg>
+                        <span class="repeat-one hidden">1</span>
+                    </button>
+                </div>
+
+                <div class="volume-control">
+                    <button class="btn-icon" id="volumeBtn" aria-label="Mute/Unmute">
+                        <svg class="volume-icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path
+                                d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z" />
+                        </svg>
+                    </button>
+                    <div class="volume-slider">
+                        <input type="range" id="volumeSlider" min="0" max="100" value="70" aria-label="Volume">
+                    </div>
+                </div>
+            </section>
+
+            <!-- Playlist Section -->
+            <section class="playlist-section">
+                <div class="section-header">
+                    <h3>Playlist</h3>
+                    <span class="playlist-count" id="playlistCount">0 mixes</span>
+                </div>
+
+                <!-- Library Tabs -->
+                <div class="library-tabs">
+                    <button class="tab-btn active" data-view="all">Todos 🎧</button>
+                    <button class="tab-btn" data-view="favorites">Favoritos ❤️</button>
+                    <button class="tab-btn" data-view="history">Historial 🕒</button>
+                </div>
+
+                <!-- Search Bar -->
+                <div class="search-container">
+                    <div class="search-icon">🔍</div>
+                    <input type="text" id="searchInput" placeholder="Buscar mix..." aria-label="Buscar mix">
+                </div>
+
+                <div class="playlist" id="playlist">
+                    <!-- Playlist items will be dynamically added here -->
+                    <div class="playlist-empty">
+                        <div class="empty-icon">🎧</div>
+                        <p>No hay mixes disponibles</p>
+                        <small>Agrega archivos MP3 a la carpeta 'music' para comenzar</small>
+                    </div>
+                </div>
+            </section>
+
+
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>&copy; 2026 PERCY QUASAR EN EL OASIS. Todos los derechos reservados.</p>
+            <p class="footer-note">OASIS MUSIC PLAYER | CUSCO </p>
+        </footer>
+    </div>
+
+    <!-- Audio Element -->
+    <audio id="audioPlayer" preload="auto"></audio>
+
+    <!-- JavaScript -->
+    <script src="app.js"></script>
+</body>
+
+</html>
