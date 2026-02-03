@@ -105,6 +105,256 @@ const playlist = [
         file: "https://archive.org/download/oasis_202601/oasismix_hq_parte015.mp3",
         size: "MP3"
     },
+    {
+        title: "Oasis Mix - Parte 16",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte016.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 17",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte017.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 18",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte018.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 19",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte019.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 20",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte020.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 21",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte021.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 22",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte022.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 23",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte023.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 24",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte024.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 25",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte025.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 26",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte026.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 27",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte027.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 28",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte028.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 29",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte029.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 30",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte030.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 31",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte031.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 32",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte032.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 33",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte033.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 34",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte034.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 35",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte035.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 36",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte036.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 37",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte037.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 38",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte038.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 39",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte039.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 40",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte040.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 41",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte041.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 42",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte042.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 43",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte043.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 44",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte044.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 45",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte045.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 46",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte046.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 47",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte047.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 48",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte048.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 49",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte049.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 50",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte050.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 51",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte051.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 52",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte052.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 53",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte053.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 54",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte054.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 55",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte055.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 56",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte056.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 57",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte057.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 58",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte058.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 59",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte059.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 60",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte060.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 61",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte061.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 62",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte062.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 63",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte063.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 64",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte064.mp3",
+        size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 65",
+        file: "https://archive.org/download/oasismix/oasismix_hq_parte065.mp3",
+        size: "MP3"
+    }
 ];
 
 // === State Management ===
@@ -2467,3 +2717,4 @@ console.log(`
 ║  ↑/↓      - Volume Up/Down           ║
 ╚═══════════════════════════════════════╝
 `);
+
