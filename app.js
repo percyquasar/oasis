@@ -354,6 +354,11 @@ const playlist = [
         title: "Oasis Mix - Parte 65",
         file: "https://archive.org/download/oasismix/oasismix_hq_parte065.mp3",
         size: "MP3"
+    },
+    {
+        title: "Oasis Mix - Parte 66",
+        file: "https://archive.org/download/oasis-mix/OASIS_MIX_66.mp3",
+        size: "MP3"
     }
 ];
 
