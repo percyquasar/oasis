@@ -23,6 +23,10 @@
     <meta name="format-detection" content="telephone=no">
     <!-- Theme color for mobile browser chrome -->
     <meta name="theme-color" content="#0a0a1a">
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <!-- iOS PWA icon -->
+    <link rel="apple-touch-icon" href="percyquasar.jpg">
 
     <!-- Google Fonts -->
     <link
@@ -310,6 +314,17 @@
 
     <!-- JavaScript -->
     <script src="app.js"></script>
+
+    <!-- Service Worker Registration (PWA) -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => console.log('✅ Service Worker registrado:', reg.scope))
+                    .catch(err => console.warn('⚠️ SW error:', err));
+            });
+        }
+    </script>
 </body>
 
 </html>

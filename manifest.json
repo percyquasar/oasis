@@ -1,0 +1,29 @@
+{
+  "name": "Percy Quasar en el Oasis",
+  "short_name": "Oasis Radio",
+  "description": "Streaming de música con alarma inteligente y anuncios de radio",
+  "start_url": "/oasis/",
+  "scope": "/oasis/",
+  "display": "standalone",
+  "background_color": "#0a0a1a",
+  "theme_color": "#0a0a1a",
+  "orientation": "portrait-primary",
+  "categories": ["music", "entertainment"],
+  "lang": "es",
+  "icons": [
+    {
+      "src": "percyquasar.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "percyquasar.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false
+}
