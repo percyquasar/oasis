@@ -2097,9 +2097,58 @@ function checkAlarmTrigger() {
     const isSnoozed = state.alarm.snoozedUntil && Date.now() < state.alarm.snoozedUntil;
     const snoozeFired = state.alarm.snoozedUntil && Date.now() >= state.alarm.snoozedUntil;
 
-    if (snoozeFired || (!isSnoozed && currentTimeStr === state.alarm.time && now.getSeconds() === 0)) {
+    // Use a 58-second window instead of exact second=0 to never miss the trigger
+    // when the tab is backgrounded or the interval fires slightly late.
+    const alarmNow = !isSnoozed && currentTimeStr === state.alarm.time && now.getSeconds() < 58;
+    const justFired = !state.alarm.lastFiredMinute || state.alarm.lastFiredMinute !== currentTimeStr;
+
+    if (snoozeFired || (alarmNow && justFired)) {
+        state.alarm.lastFiredMinute = currentTimeStr;
         state.alarm.snoozedUntil = null;
         triggerAlarmWakeUp();
+    }
+
+    // Reset lastFiredMinute when we move past that minute
+    if (state.alarm.lastFiredMinute && state.alarm.lastFiredMinute !== currentTimeStr) {
+        state.alarm.lastFiredMinute = null;
+    }
+}
+
+// === Alarm Beep Tone Generator using Web Audio API ===
+let alarmBeepInterval = null;
+function startAlarmBeeps() {
+    if (alarmBeepInterval) return;
+    function playBeep(freq, duration, vol) {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(ctx.destination);
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(freq, ctx.currentTime);
+            gainNode.gain.setValueAtTime(vol, ctx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+            oscillator.start(ctx.currentTime);
+            oscillator.stop(ctx.currentTime + duration);
+            oscillator.onended = () => ctx.close();
+        } catch(e) { /* AudioContext not available */ }
+    }
+    // Play alarm pattern: two beeps then pause
+    alarmBeepInterval = setInterval(() => {
+        if (!state.alarm.isRinging) {
+            clearInterval(alarmBeepInterval);
+            alarmBeepInterval = null;
+            return;
+        }
+        playBeep(880, 0.3, 0.8);  // A5
+        setTimeout(() => playBeep(1100, 0.3, 0.8), 350); // C#6
+    }, 1000);
+}
+function stopAlarmBeeps() {
+    if (alarmBeepInterval) {
+        clearInterval(alarmBeepInterval);
+        alarmBeepInterval = null;
     }
 }
 
@@ -2118,19 +2167,45 @@ async function triggerAlarmWakeUp() {
         elements.alarmRingModal.classList.remove('hidden');
     }
 
-    // Wake-up Music Fade-In (Gentle volume ramp)
-    const targetVolume = (typeof state.volume === 'number' && state.volume > 0) ? state.volume : (CONFIG.defaultVolume || 0.7);
-    elements.audio.volume = 0.05;
+    // === STEP 1: Start beep tones immediately (Web Audio API works without user gesture
+    // once AudioContext was unlocked by earlier user interaction)
+    startAlarmBeeps();
 
-    // If no track loaded, load first track
-    if (state.currentTrackIndex === -1 && playlist.length > 0) {
-        loadTrack(0, true);
-    } else if (!state.isPlaying) {
-        play();
+    // === STEP 2: Try to play/resume music stream ===
+    const targetVolume = (typeof state.volume === 'number' && state.volume > 0) ? state.volume : (CONFIG.defaultVolume || 0.7);
+    elements.audio.volume = 0.1; // Start slightly audible, not 0.05
+
+    let musicStarted = false;
+    try {
+        if (state.currentTrackIndex === -1 && playlist.length > 0) {
+            loadTrack(0, true);
+            musicStarted = true;
+        } else if (!state.isPlaying) {
+            await elements.audio.play();
+            state.isPlaying = true;
+            musicStarted = true;
+        } else {
+            musicStarted = true; // Already playing
+        }
+    } catch (e) {
+        console.warn('⏰ Alarm: autoplay blocked by browser, showing tap-to-wake prompt.', e);
+        // Show a tap prompt inside the alarm modal so user can unlock audio
+        const modal = elements.alarmRingModal;
+        if (modal && !modal.querySelector('.alarm-tap-prompt')) {
+            const prompt = document.createElement('p');
+            prompt.className = 'alarm-tap-prompt';
+            prompt.textContent = '👆 Toca aquí para activar el audio';
+            prompt.style.cssText = 'font-size:1.1rem;color:#FFD700;cursor:pointer;margin-top:12px;animation:pulse 1s infinite';
+            prompt.addEventListener('click', () => {
+                elements.audio.play().catch(() => {});
+                prompt.remove();
+            });
+            modal.querySelector('.alarm-ring-content')?.appendChild(prompt);
+        }
     }
 
-    // Gentle volume ramp up over 12 seconds so waking up is comfortable
-    const volStep = (targetVolume - 0.05) / 24;
+    // === STEP 3: Gentle volume ramp up over 15 seconds ===
+    const volStep = (targetVolume - 0.1) / 30;
     const wakeFade = setInterval(() => {
         if (!state.alarm.isRinging) {
             clearInterval(wakeFade);
@@ -2144,20 +2219,22 @@ async function triggerAlarmWakeUp() {
         }
     }, 500);
 
-    // Speak Morning Greeting
+    // === STEP 4: Morning voice greeting after beeps settle ===
     setTimeout(() => {
         if (!state.alarm.isRinging) return;
+        stopAlarmBeeps(); // Stop beeps before speaking
         const now = new Date();
         const h12 = now.getHours() % 12 || 12;
-        const m = now.getMinutes();
+        const m = String(now.getMinutes()).padStart(2, '0');
         const weather = state.radioData && state.radioData.weather ? state.radioData.weather : '';
-        const morningGreeting = `¡Buenos días! Oasis Radio te despierta. Son las ${h12} con ${m} minutos de la mañana. ${weather} Que tengas un día excelente y productivo con la mejor música de Percy Quasar.`;
+        const morningGreeting = `¡Buenos días! Oasis Radio te despierta. Son las ${h12} con ${m} minutos. ${weather} Que tengas un día excelente con la mejor música de Percy Quasar.`;
         speakText(morningGreeting);
-    }, 3500);
+    }, 5000);
 }
 
 function stopAlarmRinging(stopMusic = false) {
     state.alarm.isRinging = false;
+    stopAlarmBeeps(); // Always stop beep tones
     if (elements.alarmRingModal) elements.alarmRingModal.classList.add('hidden');
 
     if (stopMusic) {
@@ -2171,6 +2248,7 @@ function stopAlarmRinging(stopMusic = false) {
 
 function snoozeAlarm() {
     state.alarm.isRinging = false;
+    stopAlarmBeeps(); // Stop beep tones on snooze
     state.alarm.snoozedUntil = Date.now() + 5 * 60 * 1000; // 5 minutes
     if (elements.alarmRingModal) elements.alarmRingModal.classList.add('hidden');
 
