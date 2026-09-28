@@ -64,6 +64,10 @@
                     <span class="icon" aria-hidden="true">🎙️</span>
                     <span class="voice-indicator"></span>
                 </button>
+                <button class="btn-icon" id="alarmBtn" aria-label="Alarma Despertador" title="Alarma Despertador">
+                    <span class="icon" aria-hidden="true">⏰</span>
+                    <span id="alarmIndicator" class="alarm-indicator-mini hidden">●</span>
+                </button>
                 <button class="btn-icon" id="sleepBtn" aria-label="Temporizador" title="Temporizador de Sueño">
                     <span class="icon" aria-hidden="true">🌙</span>
                     <span id="sleepCountdown" class="sleep-countdown-mini hidden">00:00</span>
@@ -79,6 +83,51 @@
                 </button>
             </div>
         </header>
+
+        <!-- Alarm Clock Modal -->
+        <div id="alarmModal" class="modal-overlay hidden">
+            <div class="modal-content glass-panel alarm-modal-box">
+                <h3>Alarma Despertador ⏰</h3>
+                <p>Despierta con la música de Oasis y el reporte matutino en vivo.</p>
+
+                <div class="alarm-time-picker">
+                    <input type="time" id="alarmTimeInput" value="07:00" class="alarm-input">
+                </div>
+
+                <div class="alarm-presets">
+                    <button class="btn-preset" data-time="06:00">6:00 AM</button>
+                    <button class="btn-preset" data-time="06:30">6:30 AM</button>
+                    <button class="btn-preset" data-time="07:00">7:00 AM</button>
+                    <button class="btn-preset" data-time="07:30">7:30 AM</button>
+                    <button class="btn-preset" data-time="08:00">8:00 AM</button>
+                </div>
+
+                <div class="alarm-status-box" id="alarmStatusText">
+                    Sin alarma activa
+                </div>
+
+                <div class="alarm-actions">
+                    <button class="btn-alarm-action btn-set-alarm" id="setAlarmBtn">🔔 Activar Alarma</button>
+                    <button class="btn-alarm-action btn-cancel-alarm hidden" id="cancelAlarmBtn">🔕 Desactivar</button>
+                </div>
+
+                <button class="btn-cancel" id="closeAlarmModal">Cerrar</button>
+            </div>
+        </div>
+
+        <!-- Alarm Ringing (Wake-up) Overlay -->
+        <div id="alarmRingModal" class="modal-overlay hidden">
+            <div class="modal-content glass-panel alarm-ring-content">
+                <div class="alarm-ring-icon">⏰</div>
+                <h2 class="alarm-ring-title">¡BUENOS DÍAS!</h2>
+                <p class="alarm-ring-subtitle">Hora de levantarse con Oasis Radio ☀️</p>
+                <div class="alarm-ring-time" id="alarmRingTimeDisplay">07:00</div>
+                <div class="alarm-ring-actions">
+                    <button class="btn-ring-action btn-stop-ring" id="stopAlarmRingBtn">☀️ Despertar</button>
+                    <button class="btn-ring-action btn-snooze-ring" id="snoozeAlarmBtn">💤 Posponer 5 min</button>
+                </div>
+            </div>
+        </div>
 
         <!-- Sleep Timer Modal -->
         <div id="sleepModal" class="modal-overlay hidden">

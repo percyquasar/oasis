@@ -396,6 +396,14 @@ const state = {
     originalVolume: 0,
     // Phase 4 Aesthetic Features
     visualizerMode: 'bars', // 'bars' | 'waves' | 'circle' | 'particles'
+    // Alarm Clock State
+    alarm: {
+        enabled: false,
+        time: '07:00',
+        snoozedUntil: null,
+        isRinging: false
+    },
+    alarmCheckInterval: null,
     // Location Preference
     locationPreference: localStorage.getItem('percy_location_pref') || 'unknown', // 'granted' | 'denied' | 'unknown'
     // Location Cache - para no pedir ubicación cada vez
@@ -465,7 +473,21 @@ const elements = {
     settingsModal: document.getElementById('settingsModal'),
     closeSettingsModal: document.getElementById('closeSettingsModal'),
     locationStatus: document.getElementById('locationStatus'),
-    resetLocationBtn: document.getElementById('resetLocationBtn')
+    resetLocationBtn: document.getElementById('resetLocationBtn'),
+    // Alarm Clock Elements
+    alarmBtn: document.getElementById('alarmBtn'),
+    alarmIndicator: document.getElementById('alarmIndicator'),
+    alarmModal: document.getElementById('alarmModal'),
+    alarmTimeInput: document.getElementById('alarmTimeInput'),
+    alarmStatusText: document.getElementById('alarmStatusText'),
+    setAlarmBtn: document.getElementById('setAlarmBtn'),
+    cancelAlarmBtn: document.getElementById('cancelAlarmBtn'),
+    closeAlarmModal: document.getElementById('closeAlarmModal'),
+    alarmPresets: document.querySelectorAll('.btn-preset'),
+    alarmRingModal: document.getElementById('alarmRingModal'),
+    alarmRingTimeDisplay: document.getElementById('alarmRingTimeDisplay'),
+    stopAlarmRingBtn: document.getElementById('stopAlarmRingBtn'),
+    snoozeAlarmBtn: document.getElementById('snoozeAlarmBtn')
 };
 
 // === Initialization ===
@@ -517,6 +539,7 @@ function init() {
     // Setup Smart Features
     setupVoiceControl();
     setupSleepTimer();
+    setupAlarmClock();
     setupSettingsModal();
     setupLocationModal(); // Ask for permission politely (only if unknown)
 
@@ -1929,6 +1952,230 @@ function startSleepTimer(minutes) {
             showToast('🌙 Buenas noches');
         }
     }, 1000);
+}
+
+// === Alarm Clock Feature (Despertador) ===
+function setupAlarmClock() {
+    loadAlarmState();
+
+    // Open Modal
+    if (elements.alarmBtn) {
+        elements.alarmBtn.addEventListener('click', () => {
+            if (elements.alarmModal) elements.alarmModal.classList.remove('hidden');
+        });
+    }
+
+    // Close Modal
+    if (elements.closeAlarmModal) {
+        elements.closeAlarmModal.addEventListener('click', () => {
+            if (elements.alarmModal) elements.alarmModal.classList.add('hidden');
+        });
+    }
+
+    // Preset buttons
+    if (elements.alarmPresets) {
+        elements.alarmPresets.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const presetTime = btn.dataset.time;
+                if (elements.alarmTimeInput) elements.alarmTimeInput.value = presetTime;
+                elements.alarmPresets.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+    }
+
+    // Set Alarm Button
+    if (elements.setAlarmBtn) {
+        elements.setAlarmBtn.addEventListener('click', () => {
+            const timeValue = elements.alarmTimeInput ? elements.alarmTimeInput.value : '07:00';
+            if (!timeValue) return;
+
+            state.alarm.enabled = true;
+            state.alarm.time = timeValue;
+            state.alarm.snoozedUntil = null;
+            saveAlarmState();
+            updateAlarmUI();
+
+            showToast(`⏰ Alarma activada para las ${formatAlarmDisplay(timeValue)}`);
+            if (elements.alarmModal) elements.alarmModal.classList.add('hidden');
+        });
+    }
+
+    // Cancel Alarm Button
+    if (elements.cancelAlarmBtn) {
+        elements.cancelAlarmBtn.addEventListener('click', () => {
+            state.alarm.enabled = false;
+            state.alarm.snoozedUntil = null;
+            saveAlarmState();
+            updateAlarmUI();
+            showToast('🔕 Alarma desactivada');
+        });
+    }
+
+    // Stop Ringing (Woke up)
+    if (elements.stopAlarmRingBtn) {
+        elements.stopAlarmRingBtn.addEventListener('click', () => {
+            stopAlarmRinging(false); // keep music playing
+        });
+    }
+
+    // Snooze 5 minutes
+    if (elements.snoozeAlarmBtn) {
+        elements.snoozeAlarmBtn.addEventListener('click', () => {
+            snoozeAlarm();
+        });
+    }
+
+    // Start background check loop (every 1 second)
+    if (!state.alarmCheckInterval) {
+        state.alarmCheckInterval = setInterval(checkAlarmTrigger, 1000);
+    }
+}
+
+function formatAlarmDisplay(timeStr) {
+    if (!timeStr) return '--:--';
+    const [h, m] = timeStr.split(':').map(Number);
+    const period = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    return `${h12}:${String(m).padStart(2, '0')} ${period}`;
+}
+
+function loadAlarmState() {
+    try {
+        const saved = localStorage.getItem('oasis_alarm_config');
+        if (saved) {
+            const data = JSON.parse(saved);
+            state.alarm.enabled = Boolean(data.enabled);
+            state.alarm.time = data.time || '07:00';
+            if (elements.alarmTimeInput) elements.alarmTimeInput.value = state.alarm.time;
+        }
+    } catch (e) {
+        console.warn('Error loading alarm config:', e);
+    }
+    updateAlarmUI();
+}
+
+function saveAlarmState() {
+    try {
+        localStorage.setItem('oasis_alarm_config', JSON.stringify({
+            enabled: state.alarm.enabled,
+            time: state.alarm.time
+        }));
+    } catch (e) {
+        console.warn('Error saving alarm config:', e);
+    }
+}
+
+function updateAlarmUI() {
+    if (!elements.alarmStatusText) return;
+
+    if (state.alarm.enabled) {
+        elements.alarmStatusText.textContent = `⏰ Alarma activa: ${formatAlarmDisplay(state.alarm.time)}`;
+        elements.alarmStatusText.classList.add('active');
+        if (elements.alarmIndicator) elements.alarmIndicator.classList.remove('hidden');
+        if (elements.setAlarmBtn) elements.setAlarmBtn.textContent = 'Actualizar Hora';
+        if (elements.cancelAlarmBtn) elements.cancelAlarmBtn.classList.remove('hidden');
+        if (elements.alarmBtn) elements.alarmBtn.classList.add('active');
+    } else {
+        elements.alarmStatusText.textContent = 'Sin alarma activa';
+        elements.alarmStatusText.classList.remove('active');
+        if (elements.alarmIndicator) elements.alarmIndicator.classList.add('hidden');
+        if (elements.setAlarmBtn) elements.setAlarmBtn.textContent = '🔔 Activar Alarma';
+        if (elements.cancelAlarmBtn) elements.cancelAlarmBtn.classList.add('hidden');
+        if (elements.alarmBtn) elements.alarmBtn.classList.remove('active');
+    }
+}
+
+function checkAlarmTrigger() {
+    if (!state.alarm.enabled || state.alarm.isRinging) return;
+
+    const now = new Date();
+    const curH = String(now.getHours()).padStart(2, '0');
+    const curM = String(now.getMinutes()).padStart(2, '0');
+    const currentTimeStr = `${curH}:${curM}`;
+
+    const isSnoozed = state.alarm.snoozedUntil && Date.now() < state.alarm.snoozedUntil;
+    const snoozeFired = state.alarm.snoozedUntil && Date.now() >= state.alarm.snoozedUntil;
+
+    if (snoozeFired || (!isSnoozed && currentTimeStr === state.alarm.time && now.getSeconds() === 0)) {
+        state.alarm.snoozedUntil = null;
+        triggerAlarmWakeUp();
+    }
+}
+
+async function triggerAlarmWakeUp() {
+    console.log('⏰ ¡ALARMA DISPARADA! Despertando con Oasis Radio...');
+    state.alarm.isRinging = true;
+
+    // Show Ring Modal
+    if (elements.alarmRingTimeDisplay) {
+        const now = new Date();
+        const curH = String(now.getHours()).padStart(2, '0');
+        const curM = String(now.getMinutes()).padStart(2, '0');
+        elements.alarmRingTimeDisplay.textContent = `${curH}:${curM}`;
+    }
+    if (elements.alarmRingModal) {
+        elements.alarmRingModal.classList.remove('hidden');
+    }
+
+    // Wake-up Music Fade-In (Gentle volume ramp)
+    const targetVolume = (typeof state.volume === 'number' && state.volume > 0) ? state.volume : (CONFIG.defaultVolume || 0.7);
+    elements.audio.volume = 0.05;
+
+    // If no track loaded, load first track
+    if (state.currentTrackIndex === -1 && playlist.length > 0) {
+        loadTrack(0, true);
+    } else if (!state.isPlaying) {
+        play();
+    }
+
+    // Gentle volume ramp up over 12 seconds so waking up is comfortable
+    const volStep = (targetVolume - 0.05) / 24;
+    const wakeFade = setInterval(() => {
+        if (!state.alarm.isRinging) {
+            clearInterval(wakeFade);
+            return;
+        }
+        if (elements.audio.volume < targetVolume) {
+            elements.audio.volume = Math.min(targetVolume, elements.audio.volume + volStep);
+        } else {
+            elements.audio.volume = targetVolume;
+            clearInterval(wakeFade);
+        }
+    }, 500);
+
+    // Speak Morning Greeting
+    setTimeout(() => {
+        if (!state.alarm.isRinging) return;
+        const now = new Date();
+        const h12 = now.getHours() % 12 || 12;
+        const m = now.getMinutes();
+        const weather = state.radioData && state.radioData.weather ? state.radioData.weather : '';
+        const morningGreeting = `¡Buenos días! Oasis Radio te despierta. Son las ${h12} con ${m} minutos de la mañana. ${weather} Que tengas un día excelente y productivo con la mejor música de Percy Quasar.`;
+        speakText(morningGreeting);
+    }, 3500);
+}
+
+function stopAlarmRinging(stopMusic = false) {
+    state.alarm.isRinging = false;
+    if (elements.alarmRingModal) elements.alarmRingModal.classList.add('hidden');
+
+    if (stopMusic) {
+        pause();
+    } else {
+        // Restore target volume
+        elements.audio.volume = state.volume || 0.7;
+        showToast('☀️ ¡Buenos días! Que disfrutes tu música.');
+    }
+}
+
+function snoozeAlarm() {
+    state.alarm.isRinging = false;
+    state.alarm.snoozedUntil = Date.now() + 5 * 60 * 1000; // 5 minutes
+    if (elements.alarmRingModal) elements.alarmRingModal.classList.add('hidden');
+
+    pause();
+    showToast('💤 Alarma pospuesta por 5 minutos');
 }
 
 // 3. Settings Modal

@@ -1267,3 +1267,223 @@ body.apollo-mode .search-icon {
     background: rgba(255, 255, 255, 0.2);
     transform: translateY(-2px);
 }
+
+/* === Alarm Clock Feature Styles === */
+
+.alarm-indicator-mini {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    font-size: 0.65rem;
+    color: #ffd166;
+    text-shadow: 0 0 8px #ffd166;
+    animation: pulse 1.5s infinite;
+}
+
+.alarm-modal-box {
+    max-width: 360px !important;
+}
+
+.alarm-time-picker {
+    margin: 1.2rem 0;
+    display: flex;
+    justify-content: center;
+}
+
+.alarm-input {
+    background: rgba(15, 15, 28, 0.8);
+    border: 2px solid rgba(165, 180, 252, 0.4);
+    color: #fff;
+    font-size: 2.2rem;
+    font-weight: 700;
+    font-family: inherit;
+    padding: 0.6rem 1.2rem;
+    border-radius: 16px;
+    text-align: center;
+    outline: none;
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
+    transition: all 0.3s ease;
+}
+
+.alarm-input:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 25px rgba(99, 102, 241, 0.4);
+    transform: scale(1.02);
+}
+
+.alarm-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    justify-content: center;
+    margin-bottom: 1.2rem;
+}
+
+.btn-preset {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.85);
+    padding: 0.4rem 0.7rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-preset:hover, .btn-preset.active {
+    background: rgba(99, 102, 241, 0.3);
+    border-color: #6366f1;
+    color: #fff;
+    transform: translateY(-1px);
+}
+
+.alarm-status-box {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 1.2rem;
+    border: 1px dashed rgba(255, 255, 255, 0.15);
+}
+
+.alarm-status-box.active {
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    color: #34d399;
+}
+
+.alarm-actions {
+    display: flex;
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+}
+
+.btn-alarm-action {
+    flex: 1;
+    padding: 0.85rem 1rem;
+    border-radius: 14px;
+    border: none;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.25s ease;
+}
+
+.btn-set-alarm {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white;
+    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.35);
+}
+
+.btn-set-alarm:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+}
+
+.btn-cancel-alarm {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+}
+
+.btn-cancel-alarm:hover {
+    background: rgba(239, 68, 68, 0.25);
+    color: #fff;
+}
+
+/* Alarm Ringing Screen */
+.alarm-ring-content {
+    max-width: 360px !important;
+    background: radial-gradient(circle at center, rgba(30, 27, 75, 0.95), rgba(15, 15, 26, 0.98)) !important;
+    border: 1px solid rgba(255, 209, 102, 0.3) !important;
+    box-shadow: 0 0 50px rgba(255, 209, 102, 0.25) !important;
+    animation: alarmPulseGlow 2s infinite alternate ease-in-out;
+}
+
+@keyframes alarmPulseGlow {
+    from { box-shadow: 0 0 30px rgba(255, 209, 102, 0.2); }
+    to { box-shadow: 0 0 60px rgba(255, 209, 102, 0.45); }
+}
+
+.alarm-ring-icon {
+    font-size: 3.5rem;
+    margin-bottom: 0.5rem;
+    display: inline-block;
+    animation: ringShake 0.6s infinite ease-in-out;
+}
+
+@keyframes ringShake {
+    0%, 100% { transform: rotate(0deg); }
+    20% { transform: rotate(-15deg); }
+    40% { transform: rotate(15deg); }
+    60% { transform: rotate(-10deg); }
+    80% { transform: rotate(10deg); }
+}
+
+.alarm-ring-title {
+    font-size: 1.8rem;
+    margin-bottom: 0.3rem;
+    background: linear-gradient(135deg, #ffd166, #ff99aa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 800;
+    letter-spacing: 1px;
+}
+
+.alarm-ring-subtitle {
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 0.95rem;
+    margin-bottom: 1.2rem;
+}
+
+.alarm-ring-time {
+    font-size: 2.8rem;
+    font-weight: 800;
+    color: #fff;
+    text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+    margin-bottom: 1.5rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.alarm-ring-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.btn-ring-action {
+    width: 100%;
+    padding: 0.9rem;
+    border-radius: 16px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.25s ease;
+}
+
+.btn-stop-ring {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);
+}
+
+.btn-stop-ring:hover {
+    transform: scale(1.03);
+    box-shadow: 0 6px 25px rgba(16, 185, 129, 0.6);
+}
+
+.btn-snooze-ring {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #e2e8f0;
+}
+
+.btn-snooze-ring:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
