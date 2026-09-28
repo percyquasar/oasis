@@ -526,8 +526,10 @@ function init() {
     // Setup Search
     setupSearch();
 
-    // Setup Visualizer (will activate on user interaction due to AudioContext policy)
-    document.addEventListener('click', setupAudioContext, { once: true });
+    // Setup Visualizer + unlock AudioContext on first interaction (click OR touch for mobile)
+    const unlockAudioCtx = () => { setupAudioContext(); };
+    document.addEventListener('click', unlockAudioCtx, { once: true });
+    document.addEventListener('touchstart', unlockAudioCtx, { once: true });
 
     // Setup Tabs
     setupTabs();
@@ -1670,11 +1672,21 @@ function updateBuffer() {
 
 // === Audio Visualizer ===
 function setupAudioContext() {
-    if (state.audioContext) return;
+    if (state.audioContext) {
+        // Resume if suspended (important for mobile after background/lock)
+        if (state.audioContext.state === 'suspended') {
+            state.audioContext.resume().catch(() => {});
+        }
+        return;
+    }
 
     try {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         state.audioContext = new AudioContext();
+        // Resume immediately inside the gesture handler
+        if (state.audioContext.state === 'suspended') {
+            state.audioContext.resume().catch(() => {});
+        }
 
         state.analyser = state.audioContext.createAnalyser();
         state.analyser.fftSize = 256;
@@ -2115,12 +2127,15 @@ function checkAlarmTrigger() {
 }
 
 // === Alarm Beep Tone Generator using Web Audio API ===
+// Uses the SHARED state.audioContext (already unlocked by user gesture)
+// so it works on iOS/Android without requiring a new user gesture.
 let alarmBeepInterval = null;
-function startAlarmBeeps() {
-    if (alarmBeepInterval) return;
-    function playBeep(freq, duration, vol) {
-        try {
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+function playBeep(freq, duration, vol) {
+    try {
+        // Prefer the shared context (already unlocked); fall back to new one
+        const ctx = state.audioContext || new (window.AudioContext || window.webkitAudioContext)();
+        // Resume if suspended (happens after phone lock screen / background)
+        const doPlay = () => {
             const oscillator = ctx.createOscillator();
             const gainNode = ctx.createGain();
             oscillator.connect(gainNode);
@@ -2131,19 +2146,26 @@ function startAlarmBeeps() {
             gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
             oscillator.start(ctx.currentTime);
             oscillator.stop(ctx.currentTime + duration);
-            oscillator.onended = () => ctx.close();
-        } catch(e) { /* AudioContext not available */ }
-    }
-    // Play alarm pattern: two beeps then pause
+        };
+        if (ctx.state === 'suspended') {
+            ctx.resume().then(doPlay).catch(() => {});
+        } else {
+            doPlay();
+        }
+    } catch(e) { console.warn('Beep error:', e); }
+}
+function startAlarmBeeps() {
+    if (alarmBeepInterval) return;
+    // Play alarm pattern: two beeps then pause (every 1.2s)
     alarmBeepInterval = setInterval(() => {
         if (!state.alarm.isRinging) {
             clearInterval(alarmBeepInterval);
             alarmBeepInterval = null;
             return;
         }
-        playBeep(880, 0.3, 0.8);  // A5
-        setTimeout(() => playBeep(1100, 0.3, 0.8), 350); // C#6
-    }, 1000);
+        playBeep(880, 0.35, 1.0);   // A5 - loud
+        setTimeout(() => playBeep(1100, 0.35, 1.0), 400); // C#6
+    }, 1200);
 }
 function stopAlarmBeeps() {
     if (alarmBeepInterval) {
