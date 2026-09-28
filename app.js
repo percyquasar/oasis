@@ -401,9 +401,11 @@ const state = {
         enabled: false,
         time: '07:00',
         snoozedUntil: null,
-        isRinging: false
+        isRinging: false,
+        lastFiredMinute: null
     },
     alarmCheckInterval: null,
+    wakeLock: null, // Screen Wake Lock sentinel
     // Location Preference
     locationPreference: localStorage.getItem('percy_location_pref') || 'unknown', // 'granted' | 'denied' | 'unknown'
     // Location Cache - para no pedir ubicación cada vez
@@ -2008,6 +2010,11 @@ function setupAlarmClock() {
             saveAlarmState();
             updateAlarmUI();
 
+            // Request Wake Lock to keep device awake for alarm
+            requestWakeLock();
+            // Request notification permission + schedule system notification
+            requestNotificationPermission().then(() => scheduleAlarmNotification(timeValue));
+
             showToast(`⏰ Alarma activada para las ${formatAlarmDisplay(timeValue)}`);
             if (elements.alarmModal) elements.alarmModal.classList.add('hidden');
         });
@@ -2020,6 +2027,8 @@ function setupAlarmClock() {
             state.alarm.snoozedUntil = null;
             saveAlarmState();
             updateAlarmUI();
+            releaseWakeLock(); // Release wake lock when alarm is cancelled
+            cancelAlarmNotification();
             showToast('🔕 Alarma desactivada');
         });
     }
@@ -3049,6 +3058,114 @@ window.closeVisualRadio = function () {
         }, 300);
     }
 };
+
+// =====================================================
+// === WAKE LOCK - Keeps device awake during alarm  ===
+// =====================================================
+async function requestWakeLock() {
+    if (!('wakeLock' in navigator)) {
+        console.warn('⚠️ Wake Lock API no disponible en este navegador');
+        return;
+    }
+    try {
+        if (state.wakeLock) return; // Already held
+        state.wakeLock = await navigator.wakeLock.request('screen');
+        state.wakeLock.addEventListener('release', () => {
+            console.log('🔓 Wake Lock liberado');
+            state.wakeLock = null;
+            // Re-acquire if alarm still active (e.g. page became visible again)
+            if (state.alarm.enabled) {
+                setTimeout(requestWakeLock, 1000);
+            }
+        });
+        console.log('🔒 Wake Lock activo - dispositivo no se dormirá');
+        showToast('🔒 Pantalla activa para la alarma');
+    } catch (e) {
+        console.warn('Wake Lock error:', e);
+    }
+}
+
+function releaseWakeLock() {
+    if (state.wakeLock) {
+        state.wakeLock.release().catch(() => {});
+        state.wakeLock = null;
+    }
+}
+
+// Re-acquire wake lock when tab becomes visible again (phone was unlocked)
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && state.alarm.enabled && !state.wakeLock) {
+        requestWakeLock();
+        // Also resume AudioContext if suspended
+        if (state.audioContext && state.audioContext.state === 'suspended') {
+            state.audioContext.resume().catch(() => {});
+        }
+    }
+});
+
+// =====================================================
+// === SYSTEM NOTIFICATIONS - Wake even screen-off  ===
+// =====================================================
+let alarmNotificationTimeout = null;
+
+async function requestNotificationPermission() {
+    if (!('Notification' in window)) return;
+    if (Notification.permission === 'granted') return;
+    if (Notification.permission === 'denied') {
+        showToast('⚠️ Activa las notificaciones para alarmas en segundo plano');
+        return;
+    }
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+        showToast('🔔 Notificaciones activadas para la alarma');
+    }
+}
+
+function scheduleAlarmNotification(timeStr) {
+    cancelAlarmNotification();
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    if (!timeStr) return;
+
+    const now = new Date();
+    const [targetH, targetM] = timeStr.split(':').map(Number);
+    let alarmDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), targetH, targetM, 0, 0);
+
+    // If alarm time already passed today, schedule for tomorrow
+    if (alarmDate <= now) {
+        alarmDate.setDate(alarmDate.getDate() + 1);
+    }
+
+    const msUntilAlarm = alarmDate.getTime() - Date.now();
+    console.log(`🔔 Notificación de alarma programada en ${Math.round(msUntilAlarm / 60000)} minutos`);
+
+    alarmNotificationTimeout = setTimeout(() => {
+        if (!state.alarm.enabled) return;
+        try {
+            const notif = new Notification('⏰ ¡Oasis Radio! Hora de despertar', {
+                body: `Son las ${timeStr}. ¡Toca aquí para activar la música!`,
+                icon: '/percyquasar.jpg',
+                tag: 'oasis-alarm',
+                requireInteraction: true, // Notification stays until user interacts
+                vibrate: [500, 250, 500, 250, 500] // Vibration pattern
+            });
+            notif.onclick = () => {
+                window.focus();
+                notif.close();
+                // Trigger alarm if not already ringing
+                if (!state.alarm.isRinging) triggerAlarmWakeUp();
+            };
+        } catch(e) {
+            console.warn('Notification error:', e);
+        }
+    }, msUntilAlarm);
+}
+
+function cancelAlarmNotification() {
+    if (alarmNotificationTimeout) {
+        clearTimeout(alarmNotificationTimeout);
+        alarmNotificationTimeout = null;
+    }
+}
 
 // === Start Application ===
 document.addEventListener('DOMContentLoaded', init);
