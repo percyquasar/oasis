@@ -1,7 +1,7 @@
 // === Oasis Radio Service Worker ===
 // Enables PWA installation + background capabilities
 
-const CACHE_NAME = 'oasis-radio-v1';
+const CACHE_NAME = 'oasis-radio-v2';
 const STATIC_ASSETS = [
   '/oasis/',
   '/oasis/index.html',
@@ -10,6 +10,8 @@ const STATIC_ASSETS = [
   '/oasis/extra-styles.css',
   '/oasis/performance.css',
   '/oasis/percyquasar.jpg',
+  '/oasis/icon-192.png',
+  '/oasis/icon-512.png',
   '/oasis/manifest.json'
 ];
 

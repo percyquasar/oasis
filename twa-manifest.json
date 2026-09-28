@@ -1,0 +1,30 @@
+{
+  "packageId": "com.percyquasar.oasisradio",
+  "host": "percyquasar.github.io",
+  "name": "Percy Quasar Oasis Radio",
+  "launcherName": "Oasis Radio",
+  "display": "standalone",
+  "orientation": "portrait",
+  "themeColor": "#0a0a1a",
+  "backgroundColor": "#0a0a1a",
+  "enableNotifications": true,
+  "startUrl": "/oasis/",
+  "iconUrl": "https://percyquasar.github.io/oasis/percyquasar.jpg",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "oasisradio"
+  },
+  "appVersionCode": 1,
+  "appVersionName": "1.0.0",
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://percyquasar.github.io/oasis/manifest.json",
+  "fallbackType": "customtabs",
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullyImmersive": false,
+  "minSdkVersion": 21,
+  "targetSdkVersion": 34
+}
