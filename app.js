@@ -18,14 +18,19 @@ const CONFIG = {
     volumeStep: 0.1,
     storageKey: 'percy_quasar_data', // Consolidado
     debugMode: false, // Set to true for error notifications
-    maxParticles: { mobile: 15, desktop: 30 }, // Reducido para mejor rendimiento
+    maxParticles: { mobile: 10, desktop: 30 }, // Reducido para mejor rendimiento móvil
     maxHistoryItems: 50,
     // Audio Preloading
     enablePreload: true,
     preloadNextTrack: true,
     // Announcement Settings
     firstAnnouncementDelay: 120000, // 2 minutes after music starts (in ms)
-    announcementInterval: 3600000 // 60 minutes between announcements (in ms)
+    announcementInterval: 1200000, // ⏰ 20 minutes between announcements (in ms)
+    // Voice Engine
+    useResponsiveVoice: true, // Use ResponsiveVoice.js for mobile-compatible TTS
+    voiceName: 'Spanish Latin American Female', // ResponsiveVoice name
+    voiceRate: 0.9,
+    voicePitch: 1.0
 };
 
 // === Playlist Data ===
@@ -372,6 +377,7 @@ const state = {
     previousVolume: CONFIG.defaultVolume,
     savedTime: 0, // Para restaurar el tiempo
     announcerInterval: null,
+    lowPowerMode: false, // Mode bajo consumo para móvil
     // New Apple Music-style features
     shuffleMode: false,
     repeatMode: 'off', // 'off' | 'all' | 'one'
@@ -520,11 +526,14 @@ function init() {
     // Auto-detect location if permission was previously granted
     autoDetectLocation();
 
-    // Start Auto-Announcer (Every 10 minutes)
+    // Start Auto-Announcer (Every 20 minutes)
     startAutoAnnouncer();
 
     // Start Background Data Fetcher (Instant Radio)
     startBackgroundDataFetcher();
+
+    // Initialize low-power mode for mobile
+    initLowPowerMode();
 
     // Preload voices (Chrome requires this to populate the list)
     if ('speechSynthesis' in window) {
@@ -1059,16 +1068,76 @@ function activateAutoAnnouncer() {
             announceRadioContent();
         }
 
-        // Then start regular interval
+        // Then start regular interval - every 20 MINUTES
         state.announcerInterval = setInterval(() => {
             if (state.isPlaying) {
-                console.log('⏱️ Auto-announcing radio content...');
+                console.log('⏱️ Auto-announcing radio content (every 20 min)...');
                 announceRadioContent();
             }
         }, CONFIG.announcementInterval);
 
-        console.log('🎙️ Auto-announcer interval started (every 10 min)');
+        console.log('🎙️ Auto-announcer interval started (every 20 min)');
     }, timeUntilFirstAnnouncement);
+}
+
+// === Low Power Mode (Mobile Battery Optimization) ===
+function initLowPowerMode() {
+    if (!isMobileDevice()) return;
+
+    // Check Battery API if available
+    if ('getBattery' in navigator) {
+        navigator.getBattery().then(battery => {
+            function checkBattery() {
+                const level = battery.level * 100;
+                const charging = battery.charging;
+                if (level <= 20 && !charging) {
+                    enableLowPowerMode();
+                } else {
+                    disableLowPowerMode();
+                }
+            }
+            checkBattery();
+            battery.addEventListener('levelchange', checkBattery);
+            battery.addEventListener('chargingchange', checkBattery);
+        }).catch(() => {
+            // Battery API not supported - apply light optimizations anyway on mobile
+            applyMobileOptimizations();
+        });
+    } else {
+        // No Battery API - apply light optimizations on mobile anyway
+        applyMobileOptimizations();
+    }
+}
+
+function applyMobileOptimizations() {
+    // Reduce particles on mobile
+    document.querySelectorAll('.particle').forEach((p, i) => {
+        if (i > 10) p.remove();
+    });
+    console.log('📱 Mobile optimizations applied');
+}
+
+function enableLowPowerMode() {
+    if (state.lowPowerMode) return;
+    state.lowPowerMode = true;
+    document.body.classList.add('low-power-mode');
+    // Stop particles
+    document.querySelectorAll('.particle').forEach(p => p.remove());
+    // Stop visualizer canvas updates
+    if (state.animFrameId) {
+        cancelAnimationFrame(state.animFrameId);
+        state.animFrameId = null;
+    }
+    showToast('🔋 Modo bajo consumo activado (batería baja)');
+    console.log('🔋 Low power mode enabled');
+}
+
+function disableLowPowerMode() {
+    if (!state.lowPowerMode) return;
+    state.lowPowerMode = false;
+    document.body.classList.remove('low-power-mode');
+    createParticles();
+    console.log('🔋 Low power mode disabled');
 }
 
 // === Location Permission Modal ===
@@ -2508,156 +2577,137 @@ async function updateRadioData() {
     }
 }
 
-function speakText(text) {
-    if (!('speechSynthesis' in window)) {
-        console.warn('⚠️ speechSynthesis no está disponible en este navegador');
-        showToast('⚠️ Voz no disponible en este dispositivo');
-        return;
-    }
+// === Voice Engine: ResponsiveVoice + WebSpeech Fallback ===
+// ResponsiveVoice is loaded via <script> in index.html
+// It's mobile-compatible and doesn't interrupt audio on iOS/Android
 
+function isResponsiveVoiceReady() {
+    return typeof responsiveVoice !== 'undefined' && responsiveVoice.voiceSupport();
+}
+
+function speakText(text) {
     console.log('🎙️ Iniciando anuncio de voz:', text.substring(0, 50) + '...');
 
-    // Cancel any ongoing speech
-    window.speechSynthesis.cancel();
-    closeVisualRadio(); // Close any existing modal
-
-
     const isMobile = isMobileDevice();
-    console.log('📱 Dispositivo móvil detectado:', isMobile);
-
-    // Store original state
     const wasPlaying = state.isPlaying;
     const originalVolume = state.volume;
 
-    // MOBILE: Pause music completely (better compatibility)
-    // DESKTOP: Duck volume (traditional approach)
-    if (isMobile) {
-        if (wasPlaying) {
-            console.log('📱 Pausando música para anuncio (móvil)');
-            elements.audio.pause();
-        }
-    } else {
-        // Desktop: Smooth fade down
-        const duckVolume = Math.max(0.05, originalVolume * 0.2);
-        const fadeDown = setInterval(() => {
+    // --- Audio Ducking Strategy ---
+    // On ALL devices: lower music volume while speaking (don't pause)
+    // This avoids the iOS/Android audio session conflict
+    const duckVolume = Math.max(0.05, originalVolume * (isMobile ? 0.15 : 0.2));
+
+    function duckAudio() {
+        const step = 0.04;
+        const fadeInterval = setInterval(() => {
             if (elements.audio.volume > duckVolume) {
-                elements.audio.volume = Math.max(duckVolume, elements.audio.volume - 0.05);
+                elements.audio.volume = Math.max(duckVolume, elements.audio.volume - step);
             } else {
                 elements.audio.volume = duckVolume;
-                clearInterval(fadeDown);
+                clearInterval(fadeInterval);
             }
         }, 30);
     }
 
-    const utterance = new SpeechSynthesisUtterance(text);
+    function restoreAudio() {
+        closeVisualRadio();
+        const step = 0.04;
+        const fadeInterval = setInterval(() => {
+            if (elements.audio.volume < originalVolume) {
+                elements.audio.volume = Math.min(originalVolume, elements.audio.volume + step);
+            } else {
+                elements.audio.volume = originalVolume;
+                clearInterval(fadeInterval);
+            }
+        }, 40);
+    }
 
-    // Voice Strategy - Get voices (may need to wait for voiceschanged event on some browsers)
-    let voices = window.speechSynthesis.getVoices();
+    // Duck audio before speaking
+    if (wasPlaying) duckAudio();
 
-    // If voices not loaded yet, wait for them
-    if (voices.length === 0) {
-        console.log('🎙️ Esperando a que se carguen las voces...');
-        window.speechSynthesis.addEventListener('voiceschanged', () => {
-            voices = window.speechSynthesis.getVoices();
-            selectVoice();
-        }, { once: true });
+    // --- Try ResponsiveVoice first (mobile-safe, no audio interruption) ---
+    if (isResponsiveVoiceReady()) {
+        console.log('🎙️ Usando ResponsiveVoice (compatible móvil)');
+
+        // Stop any previous speech
+        responsiveVoice.cancel();
+
+        const rvParams = {
+            rate: CONFIG.voiceRate,
+            pitch: CONFIG.voicePitch,
+            volume: 1,
+            onstart: () => {
+                console.log('🎙️ ResponsiveVoice: anuncio iniciado');
+            },
+            onend: () => {
+                console.log('🎙️ ResponsiveVoice: anuncio finalizado');
+                restoreAudio();
+            },
+            onerror: () => {
+                console.warn('⚠️ ResponsiveVoice error, intentando WebSpeech...');
+                restoreAudio();
+                speakWithWebSpeech(text, wasPlaying, originalVolume, isMobile);
+            }
+        };
+
+        responsiveVoice.speak(text, CONFIG.voiceName, rvParams);
+
     } else {
-        selectVoice();
+        // --- Fallback: Native WebSpeech API ---
+        console.log('🎙️ ResponsiveVoice no disponible, usando WebSpeech fallback');
+        speakWithWebSpeech(text, wasPlaying, originalVolume, isMobile);
+    }
+}
+
+// WebSpeech fallback (desktop mainly, or when RV not loaded)
+function speakWithWebSpeech(text, wasPlaying, originalVolume, isMobile) {
+    if (!('speechSynthesis' in window)) {
+        console.warn('⚠️ speechSynthesis no disponible');
+        showToast('⚠️ Voz no disponible en este dispositivo');
+        return;
     }
 
-    function selectVoice() {
-        const esVoices = voices.filter(v => v.lang.includes('es') || v.lang.includes('sp'));
-        console.log(`🎙️ Voces en español disponibles: ${esVoices.length}`, esVoices.map(v => v.name));
+    window.speechSynthesis.cancel();
 
-        // Prefer specific voices
-        let selectedVoice = esVoices.find(v =>
-            v.name.includes('Google') ||
-            v.name.includes('Microsoft') ||
-            v.name.includes('Paulina') ||
-            v.name.includes('Monica') ||
-            v.name.includes('Diego') ||
-            v.name.includes('Luciana')
-        );
-
-        if (!selectedVoice && esVoices.length > 0) {
-            selectedVoice = esVoices[0];
-        }
-
-        if (selectedVoice) {
-            utterance.voice = selectedVoice;
-            console.log('🎙️ Voz seleccionada:', selectedVoice.name);
-        } else {
-            console.warn('⚠️ No se encontró voz en español, usando voz por defecto');
-        }
-    }
-
+    const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'es-ES';
     utterance.rate = 0.85;
     utterance.pitch = 0.9;
-    utterance.volume = 1.0; // Max volume for speech
+    utterance.volume = 1.0;
 
-    utterance.onstart = () => {
-        console.log('🎙️ Anuncio iniciado');
-    };
+    const voices = window.speechSynthesis.getVoices();
+    const esVoices = voices.filter(v => v.lang.startsWith('es'));
+    const preferred = esVoices.find(v =>
+        v.name.includes('Google') || v.name.includes('Microsoft') ||
+        v.name.includes('Paulina') || v.name.includes('Monica') ||
+        v.name.includes('Diego') || v.name.includes('Luciana')
+    ) || esVoices[0];
+
+    if (preferred) utterance.voice = preferred;
 
     utterance.onend = () => {
-        console.log('🎙️ Anuncio finalizado, restaurando música');
         closeVisualRadio();
-
-        if (isMobile) {
-            // Mobile: Resume playback if it was playing before
-            if (wasPlaying) {
-                console.log('📱 Reanudando música (móvil)');
-                setTimeout(() => {
-                    elements.audio.play().catch(err => {
-                        console.warn('⚠️ No se pudo reanudar la música:', err);
-                    });
-                }, 300); // Small delay for better mobile compatibility
+        const fadeUp = setInterval(() => {
+            if (elements.audio.volume < originalVolume) {
+                elements.audio.volume = Math.min(originalVolume, elements.audio.volume + 0.05);
+            } else {
+                elements.audio.volume = originalVolume;
+                clearInterval(fadeUp);
             }
-        } else {
-            // Desktop: Smooth fade up
-            const fadeUp = setInterval(() => {
-                if (elements.audio.volume < originalVolume) {
-                    elements.audio.volume = Math.min(originalVolume, elements.audio.volume + 0.05);
-                } else {
-                    elements.audio.volume = originalVolume;
-                    clearInterval(fadeUp);
-                }
-            }, 50);
-        }
+        }, 50);
     };
 
-    utterance.onerror = (event) => {
-        console.error('❌ Error en speechSynthesis:', event.error, event);
-        showToast('⚠️ Error al reproducir voz');
-
-        // Restore music immediately on error
-        if (isMobile) {
-            if (wasPlaying) {
-                elements.audio.play().catch(err => console.warn('Error resuming:', err));
-            }
-        } else {
-            elements.audio.volume = originalVolume;
-        }
+    utterance.onerror = () => {
+        elements.audio.volume = originalVolume;
+        closeVisualRadio();
     };
 
-    // iOS/Mobile workaround: Sometimes speech needs a small delay
     setTimeout(() => {
         try {
             window.speechSynthesis.speak(utterance);
-            console.log('🎙️ Comando speak() ejecutado');
         } catch (e) {
-            console.error('❌ Error al ejecutar speak():', e);
-            showToast('⚠️ Error al iniciar voz');
-
-            // Restore music on error
-            if (isMobile) {
-                if (wasPlaying) {
-                    elements.audio.play().catch(err => console.warn('Error resuming:', err));
-                }
-            } else {
-                elements.audio.volume = originalVolume;
-            }
+            console.error('❌ WebSpeech error:', e);
+            elements.audio.volume = originalVolume;
         }
     }, 100);
 }

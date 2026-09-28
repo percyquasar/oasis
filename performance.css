@@ -228,3 +228,79 @@ body.apollo-mode img {
     scrollbar-width: thin;
     scrollbar-color: var(--color-surface-light) var(--color-surface);
 }
+
+/* === Low Power Mode (Mobile Battery Optimization) === */
+
+body.low-power-mode .bg-particles {
+    display: none !important;
+}
+
+body.low-power-mode .vinyl-record {
+    animation: none !important;
+}
+
+body.low-power-mode .album-art::before,
+body.low-power-mode .album-art::after {
+    animation-duration: 4s !important;
+}
+
+body.low-power-mode #visualizerCanvas {
+    opacity: 0.3;
+}
+
+body.low-power-mode .btn-control,
+body.low-power-mode .playlist-item {
+    transition-duration: 0.1s !important;
+}
+
+/* Low power mode indicator */
+body.low-power-mode .header::after {
+    content: '🔋';
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    font-size: 1rem;
+    opacity: 0.6;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+/* === Mobile Audio Optimizations === */
+
+/* Prevent iOS from zooming into inputs */
+@media (max-width: 768px) {
+    input[type="range"] {
+        font-size: 16px;
+    }
+
+    /* Better touch targets */
+    .btn-icon,
+    .btn-control,
+    .tab-btn,
+    .playlist-item {
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Prevent double-tap zoom on controls */
+    .controls,
+    .volume-control,
+    .progress-container {
+        touch-action: manipulation;
+    }
+
+    /* Reduce heavy blur effects on mobile for better GPU performance */
+    .glass-panel {
+        backdrop-filter: blur(10px) !important;
+        -webkit-backdrop-filter: blur(10px) !important;
+    }
+
+    .header {
+        backdrop-filter: blur(12px) !important;
+        -webkit-backdrop-filter: blur(12px) !important;
+    }
+
+    /* Smooth scrolling in playlist on iOS */
+    .playlist {
+        -webkit-overflow-scrolling: touch;
+    }
+}
