@@ -26,10 +26,7 @@ const CONFIG = {
     // Announcement Settings
     firstAnnouncementDelay: 120000, // 2 minutes after music starts (in ms)
     announcementInterval: 1200000, // ⏰ 20 minutes between announcements (in ms)
-    // Voice Engine
-    useResponsiveVoice: true, // Use ResponsiveVoice.js for mobile-compatible TTS
-    voiceName: 'Spanish Latin American Female', // ResponsiveVoice name
-    voiceRate: 0.9,
+    voiceRate: 0.95,
     voicePitch: 1.0
 };
 
@@ -1449,6 +1446,9 @@ function play() {
             // Activate auto-announcer when music starts playing
             activateAutoAnnouncer();
 
+            // Unlock speech synthesis on user interaction for mobile browsers
+            unlockSpeechSynthesis();
+
             // Preload next track for smooth playback
             if (CONFIG.preloadNextTrack) {
                 preloadNextTrack();
@@ -2482,6 +2482,21 @@ async function fetchCurrency() {
     }
 }
 
+// === Unlock SpeechSynthesis on Mobile (Triggered on first user interaction) ===
+function unlockSpeechSynthesis() {
+    if ('speechSynthesis' in window && !window._speechUnlocked) {
+        try {
+            const dummy = new SpeechSynthesisUtterance(' ');
+            dummy.volume = 0.01;
+            window.speechSynthesis.speak(dummy);
+            window._speechUnlocked = true;
+            console.log('🎙️ SpeechSynthesis desbloqueado para este dispositivo');
+        } catch (e) {
+            console.warn('Speech unlock:', e);
+        }
+    }
+}
+
 async function announceRadioContent() {
     // Debounce: Prevent multiple announcements in quick succession
     const now = Date.now();
@@ -2491,60 +2506,43 @@ async function announceRadioContent() {
     }
     state.lastAnnouncementTime = now;
 
-    console.log('📻 Preparing radio report...');
+    console.log('📻 Preparando reporte de hora Oasis...');
 
-    // 1. Time string
+    // 1. Natural Spanish Time
     const nowDate = new Date();
-    const hours = nowDate.getHours();
+    const hours24 = nowDate.getHours();
     const minutes = nowDate.getMinutes();
-    let timeText = `Son las ${hours} horas con ${minutes} minutos.`;
-    if (minutes === 0) timeText = `Son las ${hours} en punto.`;
-    if (minutes === 30) timeText = `Son las ${hours} y media.`;
+    const displayHours = hours24 % 12 || 12;
 
-    // 2. GetData (Use Cache if available)
-    // If cache is empty or old (> 30 min), trigger update but use what we have or generic message
-    // Ideally, the background fetcher keeps this fresh.
+    let period = 'de la mañana';
+    if (hours24 >= 12 && hours24 < 19) period = 'de la tarde';
+    else if (hours24 >= 19 || hours24 < 6) period = 'de la noche';
 
-    let weatherText = state.radioData.weather;
-    let newsText = state.radioData.news;
-    let currencyText = state.radioData.currency;
-
-    // Fallback if data is missing (first run)
-    if (!weatherText && !newsText && !currencyText) {
-        console.log('⚠️ No cached data, fetching live (might be slow)...');
-        // If really urgent, we could await here, but user asked for SPEED.
-        // Better strategy: triggering background update now and speaking just time or generic info?
-        // Let's try to fetch live if missing, but hopefully background fetcher did its job.
-        [weatherText, newsText, currencyText] = await Promise.all([
-            fetchWeather(),
-            fetchNews(),
-            fetchCurrency()
-        ]);
-
-        // Cache it for next time
-        state.radioData = { weather: weatherText, news: newsText, currency: currencyText, lastUpdated: Date.now() };
+    let timeText = `Son las ${displayHours} con ${minutes} minutos ${period}.`;
+    if (minutes === 0) timeText = `Son las ${displayHours} en punto ${period}.`;
+    else if (minutes === 15) timeText = `Son las ${displayHours} y cuarto ${period}.`;
+    else if (minutes === 30) timeText = `Son las ${displayHours} y media ${period}.`;
+    if (displayHours === 1) {
+        if (minutes === 0) timeText = `Es la una en punto ${period}.`;
+        else if (minutes === 30) timeText = `Es la una y media ${period}.`;
+        else timeText = `Es la una con ${minutes} minutos ${period}.`;
     }
 
-    // 3. Construct Full Script
-    let fullScript = `Oasis te da la hora. ${timeText}`;
+    // 2. Data from cache or state
+    let weatherText = state.radioData && state.radioData.weather ? state.radioData.weather : '';
 
+    // 3. Crisp Radio Station ID
+    let fullScript = `Oasis te da la hora. ${timeText}`;
     if (weatherText) {
         fullScript += ` ${weatherText}`;
     }
+    fullScript += ` Estás escuchando Percy Quasar en el Oasis.`;
 
-    if (currencyText) {
-        fullScript += ` ${currencyText}`;
-    }
-
-    if (newsText) {
-        fullScript += ` ${newsText}`;
-    }
-
-    fullScript += ` Estás escuchando Percy Quasar en el oasis.`;
-
-    // 4. Speak
-    speakText(fullScript);
+    // 4. Show Visual Notification
     showVisualRadio(fullScript);
+
+    // 5. Speak Text with Bulletproof Safety
+    speakText(fullScript);
 }
 
 // === Background Data Fetcher (Instant Radio) ===
@@ -2577,151 +2575,143 @@ async function updateRadioData() {
     }
 }
 
-// === Voice Engine: ResponsiveVoice + WebSpeech Fallback ===
-// ResponsiveVoice is loaded via <script> in index.html
-// It's mobile-compatible and doesn't interrupt audio on iOS/Android
-
-function isResponsiveVoiceReady() {
-    return typeof responsiveVoice !== 'undefined' && responsiveVoice.voiceSupport();
-}
+// === Voice Engine: Fail-Safe Speech Synthesis ===
+let _speechRestoreTimeout = null;
 
 function speakText(text) {
-    console.log('🎙️ Iniciando anuncio de voz:', text.substring(0, 50) + '...');
+    console.log('🎙️ Iniciando locución de radio:', text);
 
-    const isMobile = isMobileDevice();
     const wasPlaying = state.isPlaying;
-    const originalVolume = state.volume;
+    const targetVolume = (typeof state.volume === 'number' && state.volume > 0) ? state.volume : (CONFIG.defaultVolume || 0.7);
+    const duckedVolume = Math.max(0.15, targetVolume * 0.25);
 
-    // --- Audio Ducking Strategy ---
-    // On ALL devices: lower music volume while speaking (don't pause)
-    // This avoids the iOS/Android audio session conflict
-    const duckVolume = Math.max(0.05, originalVolume * (isMobile ? 0.15 : 0.2));
-
-    function duckAudio() {
-        const step = 0.04;
-        const fadeInterval = setInterval(() => {
-            if (elements.audio.volume > duckVolume) {
-                elements.audio.volume = Math.max(duckVolume, elements.audio.volume - step);
-            } else {
-                elements.audio.volume = duckVolume;
-                clearInterval(fadeInterval);
-            }
-        }, 30);
+    // Clear existing safety timer
+    if (_speechRestoreTimeout) {
+        clearTimeout(_speechRestoreTimeout);
+        _speechRestoreTimeout = null;
     }
 
+    let audioRestored = false;
     function restoreAudio() {
+        if (audioRestored) return;
+        audioRestored = true;
+
+        if (_speechRestoreTimeout) {
+            clearTimeout(_speechRestoreTimeout);
+            _speechRestoreTimeout = null;
+        }
+
         closeVisualRadio();
-        const step = 0.04;
+
+        // Smoothly fade back up to original volume
         const fadeInterval = setInterval(() => {
-            if (elements.audio.volume < originalVolume) {
-                elements.audio.volume = Math.min(originalVolume, elements.audio.volume + step);
+            if (elements.audio.volume < targetVolume) {
+                elements.audio.volume = Math.min(targetVolume, elements.audio.volume + 0.05);
             } else {
-                elements.audio.volume = originalVolume;
+                elements.audio.volume = targetVolume;
                 clearInterval(fadeInterval);
             }
         }, 40);
     }
 
-    // Duck audio before speaking
-    if (wasPlaying) duckAudio();
+    // SAFETY GUARANTEE: Never stay ducked longer than 9 seconds under ANY circumstance!
+    const estimatedSeconds = Math.min(9, Math.max(4, Math.ceil(text.length / 14)));
+    _speechRestoreTimeout = setTimeout(() => {
+        console.log('⏱️ Safety timer: Restaurando volumen de música automáticamente');
+        restoreAudio();
+    }, (estimatedSeconds + 2) * 1000);
 
-    // --- Try ResponsiveVoice first (mobile-safe, no audio interruption) ---
-    if (isResponsiveVoiceReady()) {
-        console.log('🎙️ Usando ResponsiveVoice (compatible móvil)');
-
-        // Stop any previous speech
-        responsiveVoice.cancel();
-
-        const rvParams = {
-            rate: CONFIG.voiceRate,
-            pitch: CONFIG.voicePitch,
-            volume: 1,
-            onstart: () => {
-                console.log('🎙️ ResponsiveVoice: anuncio iniciado');
-            },
-            onend: () => {
-                console.log('🎙️ ResponsiveVoice: anuncio finalizado');
-                restoreAudio();
-            },
-            onerror: () => {
-                console.warn('⚠️ ResponsiveVoice error, intentando WebSpeech...');
-                restoreAudio();
-                speakWithWebSpeech(text, wasPlaying, originalVolume, isMobile);
+    // Smoothly duck audio volume
+    if (wasPlaying) {
+        const duckInterval = setInterval(() => {
+            if (elements.audio.volume > duckedVolume) {
+                elements.audio.volume = Math.max(duckedVolume, elements.audio.volume - 0.05);
+            } else {
+                elements.audio.volume = duckedVolume;
+                clearInterval(duckInterval);
             }
-        };
-
-        responsiveVoice.speak(text, CONFIG.voiceName, rvParams);
-
-    } else {
-        // --- Fallback: Native WebSpeech API ---
-        console.log('🎙️ ResponsiveVoice no disponible, usando WebSpeech fallback');
-        speakWithWebSpeech(text, wasPlaying, originalVolume, isMobile);
+        }, 30);
     }
-}
 
-// WebSpeech fallback (desktop mainly, or when RV not loaded)
-function speakWithWebSpeech(text, wasPlaying, originalVolume, isMobile) {
     if (!('speechSynthesis' in window)) {
-        console.warn('⚠️ speechSynthesis no disponible');
-        showToast('⚠️ Voz no disponible en este dispositivo');
+        console.warn('⚠️ Web Speech API no soportada en este navegador');
+        setTimeout(restoreAudio, 3000);
         return;
     }
 
-    window.speechSynthesis.cancel();
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'es-ES';
-    utterance.rate = 0.85;
-    utterance.pitch = 0.9;
-    utterance.volume = 1.0;
-
-    const voices = window.speechSynthesis.getVoices();
-    const esVoices = voices.filter(v => v.lang.startsWith('es'));
-    const preferred = esVoices.find(v =>
-        v.name.includes('Google') || v.name.includes('Microsoft') ||
-        v.name.includes('Paulina') || v.name.includes('Monica') ||
-        v.name.includes('Diego') || v.name.includes('Luciana')
-    ) || esVoices[0];
-
-    if (preferred) utterance.voice = preferred;
-
-    utterance.onend = () => {
-        closeVisualRadio();
-        const fadeUp = setInterval(() => {
-            if (elements.audio.volume < originalVolume) {
-                elements.audio.volume = Math.min(originalVolume, elements.audio.volume + 0.05);
-            } else {
-                elements.audio.volume = originalVolume;
-                clearInterval(fadeUp);
-            }
-        }, 50);
-    };
-
-    utterance.onerror = () => {
-        elements.audio.volume = originalVolume;
-        closeVisualRadio();
-    };
-
-    setTimeout(() => {
-        try {
-            window.speechSynthesis.speak(utterance);
-        } catch (e) {
-            console.error('❌ WebSpeech error:', e);
-            elements.audio.volume = originalVolume;
+    try {
+        window.speechSynthesis.cancel();
+        if (window.speechSynthesis.paused) {
+            window.speechSynthesis.resume();
         }
-    }, 100);
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        // CRITICAL: Prevent garbage collection in Chrome / Safari
+        window._oasisUtterance = utterance;
+
+        utterance.lang = 'es-ES';
+        utterance.rate = CONFIG.voiceRate || 0.95;
+        utterance.pitch = CONFIG.voicePitch || 1.0;
+        utterance.volume = 1.0;
+
+        // Choose best Spanish voice
+        const voices = window.speechSynthesis.getVoices();
+        if (voices && voices.length > 0) {
+            const esVoice = voices.find(v =>
+                v.lang.startsWith('es') && (
+                    v.name.includes('Google') ||
+                    v.name.includes('Microsoft') ||
+                    v.name.includes('Sabina') ||
+                    v.name.includes('Helena') ||
+                    v.name.includes('Paulina') ||
+                    v.name.includes('Monica') ||
+                    v.name.includes('Diego')
+                )
+            ) || voices.find(v => v.lang.startsWith('es'));
+
+            if (esVoice) utterance.voice = esVoice;
+        }
+
+        utterance.onstart = () => {
+            console.log('🎙️ Locución iniciada');
+        };
+
+        utterance.onend = () => {
+            console.log('🎙️ Locución finalizada');
+            window._oasisUtterance = null;
+            restoreAudio();
+        };
+
+        utterance.onerror = (e) => {
+            console.warn('⚠️ Evento onerror en voz:', e);
+            window._oasisUtterance = null;
+            restoreAudio();
+        };
+
+        setTimeout(() => {
+            try {
+                window.speechSynthesis.speak(utterance);
+            } catch (err) {
+                console.error('Error al invocar speak():', err);
+                restoreAudio();
+            }
+        }, 120);
+
+    } catch (err) {
+        console.error('Error general en speakText:', err);
+        restoreAudio();
+    }
 }
 
+// === Visual Radio (Notification Overlay) ===
+let _visualRadioTimeout = null;
 
-
-// === Visual Radio (Mobile Fallback) ===
 function showVisualRadio(text) {
-    // Remove existing if any
     closeVisualRadio();
 
     const modal = document.createElement('div');
     modal.className = 'radio-modal';
-    modal.id = 'radioModal'; // For easy selection
+    modal.id = 'radioModal';
     modal.innerHTML = `
         <div class="radio-modal-content">
             <h3 class="radio-title">📻 OASIS RADIO</h3>
@@ -2739,13 +2729,22 @@ function showVisualRadio(text) {
 
     document.body.appendChild(modal);
 
-    // Animate in
     requestAnimationFrame(() => {
         modal.classList.add('show');
     });
+
+    // Auto-close modal after 8 seconds
+    if (_visualRadioTimeout) clearTimeout(_visualRadioTimeout);
+    _visualRadioTimeout = setTimeout(() => {
+        closeVisualRadio();
+    }, 8000);
 }
 
 window.closeVisualRadio = function () {
+    if (_visualRadioTimeout) {
+        clearTimeout(_visualRadioTimeout);
+        _visualRadioTimeout = null;
+    }
     const modal = document.getElementById('radioModal');
     if (modal) {
         modal.classList.remove('show');
